@@ -1,0 +1,9 @@
+# Lint du contrat OpenAPI (npm run api:lint).
+extends:
+  - recommended
+
+rules:
+  # Les endpoints publics (catalogue, inscription, connexion) n'ont volontairement pas de `security`.
+  security-defined: off
+  # Le contrat déclare localhost:8000 comme serveur de développement.
+  no-server-example.com: off

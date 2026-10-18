@@ -1,0 +1,136 @@
+{
+  "app": {
+    "name": "Find Me",
+    "tagline": "Trouve le bon prestataire pour ton projet numérique",
+    "trust": "Des prestataires vérifiés, un paiement sécurisé."
+  },
+  "nav": {
+    "home": "Accueil",
+    "orders": "Commandes",
+    "notifications": "Notifications",
+    "profile": "Profil",
+    "login": "Se connecter",
+    "register": "Créer un compte",
+    "logout": "Se déconnecter",
+    "skipToContent": "Aller au contenu",
+    "dashboard": "Tableau de bord",
+    "myServices": "Mes annonces",
+    "receivedOrders": "Commandes reçues",
+    "wallet": "Portefeuille",
+    "withdrawals": "Retraits",
+    "users": "Utilisateurs",
+    "categories": "Catégories",
+    "moderation": "Modération",
+    "disputes": "Litiges",
+    "export": "Export CSV"
+  },
+  "spaces": {
+    "client": "Espace client",
+    "prestataire": "Espace prestataire",
+    "admin": "Administration"
+  },
+  "common": {
+    "loading": "Chargement…",
+    "retry": "Réessayer",
+    "back": "Retour",
+    "backHome": "Retour à l'accueil",
+    "cancel": "Annuler",
+    "confirm": "Confirmer",
+    "close": "Fermer",
+    "save": "Enregistrer",
+    "send": "Envoyer",
+    "next": "Suivant",
+    "previous": "Précédent",
+    "empty": "Rien à afficher pour le moment.",
+    "comingSoon": "Cet écran sera conçu dans un prochain module.",
+    "showPassword": "Afficher le mot de passe",
+    "hidePassword": "Masquer le mot de passe",
+    "optional": "optionnel",
+    "page": "Page {{current}} sur {{total}}"
+  },
+  "errors": {
+    "unauthenticated": "Ta session a expiré. Connecte-toi pour continuer.",
+    "forbidden": "Tu n'as pas accès à cette action.",
+    "not_found": "Cette ressource est introuvable.",
+    "conflict": "L'opération n'est plus possible dans l'état actuel. Les informations ont été mises à jour.",
+    "csrf": "La session de sécurité a expiré. Recharge la page puis réessaie.",
+    "validation": "Certaines informations sont invalides.",
+    "rate_limited": "Trop de tentatives. Patiente un instant avant de réessayer.",
+    "server": "Le serveur rencontre un problème. Réessaie dans quelques instants.",
+    "network": "Connexion impossible. Vérifie ta connexion internet.",
+    "unknown": "Une erreur inattendue est survenue.",
+    "render": "Cette page a rencontré un problème d'affichage."
+  },
+  "pages": {
+    "notFound": {
+      "title": "Page introuvable",
+      "description": "La page que tu cherches n'existe pas ou a été déplacée."
+    },
+    "forbidden": {
+      "title": "Accès refusé",
+      "description": "Cet espace est réservé à un autre type de compte."
+    }
+  },
+  "statuts": {
+    "commande": {
+      "en_attente_reponse": "En attente de réponse",
+      "informations_demandees": "Précisions demandées",
+      "refusee": "Refusée",
+      "en_attente_paiement": "En attente de paiement",
+      "paiement_en_cours": "Paiement en cours",
+      "payee": "Payée",
+      "en_cours_realisation": "En cours de réalisation",
+      "livree": "Livrée, en attente de validation",
+      "revision_demandee": "Révision demandée",
+      "en_revision": "En révision",
+      "en_litige": "En litige",
+      "terminee": "Terminée",
+      "annulee": "Annulée",
+      "remboursee": "Remboursée"
+    },
+    "annonce": {
+      "brouillon": "Brouillon",
+      "en_attente_validation": "En attente de validation",
+      "publiee": "Publiée",
+      "refusee": "Refusée",
+      "desactivee": "Désactivée",
+      "supprimee": "Supprimée"
+    },
+    "paiement": {
+      "cree": "Créé",
+      "en_attente": "En attente de confirmation",
+      "confirme": "Confirmé",
+      "echoue": "Échoué",
+      "expire": "Expiré",
+      "rembourse": "Remboursé"
+    },
+    "retrait": {
+      "demande": "Demandé",
+      "en_verification": "En vérification",
+      "approuve": "Approuvé",
+      "en_cours_execution": "En cours d'exécution",
+      "execute": "Exécuté",
+      "echoue": "Échoué",
+      "refuse": "Refusé"
+    },
+    "litige": {
+      "ouvert": "Ouvert",
+      "en_analyse": "En cours d'examen",
+      "informations_demandees": "Informations demandées",
+      "resolu": "Résolu",
+      "ferme": "Fermé"
+    },
+    "compte": {
+      "a_verifier": "À vérifier",
+      "actif": "Actif",
+      "suspendu": "Suspendu",
+      "bloque": "Bloqué",
+      "ferme": "Fermé"
+    }
+  },
+  "operateurs": {
+    "mpesa": "M-Pesa (Vodacom)",
+    "orange_money": "Orange Money (Orange)",
+    "airtel_money": "Airtel Money (Airtel)"
+  }
+}

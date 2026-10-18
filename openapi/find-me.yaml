@@ -1,0 +1,3137 @@
+openapi: 3.0.3
+info:
+  title: Find Me - API Contractuelle
+  version: 1.1.0-sanctum
+  description: Contrat officiel d'interface entre le Backend Laravel et le Frontend React/PWA de Find Me. Cette version utilise
+    Laravel Sanctum en mode SPA avec session Laravel et cookies sécurisés. Le frontend ne stocke aucun access token ni refresh
+    token. Les requêtes d'écriture utilisent la protection CSRF de Laravel/Sanctum. Toute divergence entre le code livré et
+    ce contrat doit être traitée comme une anomalie contractuelle.
+  contact:
+    name: Équipe Développement Find Me
+servers:
+- url: http://localhost:8000/api/v1
+  description: Serveur de développement (Laravel local)
+- url: https://api.findme.cd/api/v1
+  description: Serveur de production (HTTPS obligatoire)
+tags:
+- name: Auth
+  description: Authentification SPA Laravel Sanctum, session, cookie HttpOnly et protection CSRF
+- name: Utilisateurs
+  description: Comptes, rôles et statuts (RBAC)
+- name: Catégories
+  description: Classification des services
+- name: Annonces
+  description: Catalogue de services et cycle de vie des offres
+- name: Prestataires
+  description: Profils professionnels publics et édition
+- name: Commandes
+  description: Demandes, actions de cycle, livraisons et révisions
+- name: Paiements
+  description: Initiation client et callback Mobile Money
+- name: Wallet & Retraits
+  description: Portefeuille prestataire et sorties Mobile Money
+- name: Litiges & Avis
+  description: Réclamations et notation post-commande
+- name: Notifications
+  description: Supervision in-app et acquittement
+- name: Export
+  description: Extraction CSV pour analyse externe ou rapports
+components:
+  securitySchemes:
+    SanctumSession:
+      type: apiKey
+      in: cookie
+      name: laravel_session
+      description: Session Laravel utilisée par Sanctum en mode SPA. Le cookie est géré par le navigateur et doit être configuré
+        HttpOnly et Secure en production. Le frontend ne lit pas sa valeur.
+  schemas:
+    UserLogin:
+      type: object
+      required:
+      - telephone
+      - mot_de_passe
+      properties:
+        telephone:
+          type: string
+          description: Numéro de téléphone unique
+          example: '+243810000001'
+          pattern: ^\+243[0-9]{9}$
+        mot_de_passe:
+          type: string
+          format: password
+          example: SecurePass123!
+          minLength: 8
+    UserRegister:
+      type: object
+      required:
+      - telephone
+      - mot_de_passe
+      - nom
+      - prenom
+      - role
+      properties:
+        telephone:
+          type: string
+          example: '+243810000001'
+          pattern: ^\+243[0-9]{9}$
+        mot_de_passe:
+          type: string
+          format: password
+          example: SecurePass123!
+          minLength: 8
+        nom:
+          type: string
+          example: Kalilwa
+          minLength: 1
+          maxLength: 100
+        prenom:
+          type: string
+          example: Jean-François
+          minLength: 1
+          maxLength: 100
+        postnom:
+          type: string
+          nullable: true
+        email:
+          type: string
+          format: email
+          nullable: true
+          example: jean@findme.cd
+        role:
+          type: string
+          enum:
+          - client
+          - prestataire
+    OtpVerify:
+      type: object
+      required:
+      - telephone
+      - code_otp
+      properties:
+        telephone:
+          type: string
+          pattern: ^\+243[0-9]{9}$
+        code_otp:
+          type: string
+          example: '482193'
+          pattern: ^[0-9]{6}$
+          minLength: 6
+          maxLength: 6
+    PasswordForgot:
+      type: object
+      required:
+      - telephone
+      properties:
+        telephone:
+          type: string
+          pattern: ^\+243[0-9]{9}$
+    PasswordReset:
+      type: object
+      required:
+      - telephone
+      - code_otp
+      - nouveau_mot_de_passe
+      properties:
+        telephone:
+          type: string
+          pattern: ^\+243[0-9]{9}$
+        code_otp:
+          type: string
+          pattern: ^[0-9]{6}$
+          minLength: 6
+          maxLength: 6
+        nouveau_mot_de_passe:
+          type: string
+          format: password
+          minLength: 8
+    StatutCompteUpdate:
+      type: object
+      required:
+      - statut_compte
+      properties:
+        statut_compte:
+          type: string
+          enum:
+          - actif
+          - suspendu
+          - bloque
+          - ferme
+        motif:
+          type: string
+          nullable: true
+    Utilisateur:
+      type: object
+      properties:
+        id_utilisateur:
+          type: integer
+          readOnly: true
+        telephone:
+          type: string
+          pattern: ^\+243[0-9]{9}$
+        nom:
+          type: string
+        prenom:
+          type: string
+        postnom:
+          type: string
+          nullable: true
+        email:
+          type: string
+          nullable: true
+        role:
+          type: string
+          enum:
+          - client
+          - prestataire
+          - administrateur
+          readOnly: true
+        image_profil:
+          type: string
+          nullable: true
+        statut_compte:
+          type: string
+          enum:
+          - a_verifier
+          - actif
+          - suspendu
+          - bloque
+          - ferme
+          readOnly: true
+      required:
+      - id_utilisateur
+      - telephone
+      - nom
+      - prenom
+      - role
+      - statut_compte
+    Categorie:
+      type: object
+      properties:
+        id_categorie:
+          type: integer
+        nom:
+          type: string
+        description:
+          type: string
+          nullable: true
+        icone:
+          type: string
+          nullable: true
+        est_active:
+          type: boolean
+    Annonce:
+      type: object
+      properties:
+        id_annonce:
+          type: integer
+          readOnly: true
+        id_categorie:
+          type: integer
+        id_prestataire:
+          type: integer
+          readOnly: true
+        titre:
+          type: string
+        description:
+          type: string
+        prix_base:
+          type: string
+          pattern: ^\d+(?:\.\d{1,2})?$
+          example: '20.00'
+        delai_livraison_jours:
+          type: integer
+        nombre_revisions:
+          type: integer
+        livrables_inclus:
+          type: string
+        elements_requis_client:
+          type: string
+        image_couverture:
+          type: string
+          nullable: true
+        mots_cles:
+          type: string
+          nullable: true
+        conditions_particulieres:
+          type: string
+          nullable: true
+        statut:
+          type: string
+          enum:
+          - brouillon
+          - en_attente_validation
+          - publiee
+          - refusee
+          - desactivee
+          - supprimee
+          readOnly: true
+        motif_refus:
+          type: string
+          nullable: true
+          readOnly: true
+        published_at:
+          type: string
+          format: date-time
+          nullable: true
+          readOnly: true
+      required:
+      - id_annonce
+      - id_categorie
+      - id_prestataire
+      - titre
+      - description
+      - prix_base
+      - delai_livraison_jours
+      - nombre_revisions
+      - livrables_inclus
+      - elements_requis_client
+      - statut
+    ModerationAnnonce:
+      type: object
+      required:
+      - decision
+      properties:
+        decision:
+          type: string
+          enum:
+          - publier
+          - refuser
+        motif_refus:
+          type: string
+          nullable: true
+    ProfilPrestataire:
+      type: object
+      properties:
+        id_prestataire:
+          type: integer
+          readOnly: true
+        id_utilisateur:
+          type: integer
+          readOnly: true
+        nom_professionnel:
+          type: string
+        bio:
+          type: string
+        competences:
+          type: string
+        portfolio_url:
+          type: string
+          nullable: true
+        note_moyenne:
+          type: number
+          readOnly: true
+        nombre_avis:
+          type: integer
+          readOnly: true
+        statut_disponibilite:
+          type: string
+          enum:
+          - disponible
+          - occupe
+          - indisponible
+    Commande:
+      type: object
+      properties:
+        id_commande:
+          type: integer
+          readOnly: true
+        id_prestataire:
+          type: integer
+          readOnly: true
+        id_client:
+          type: integer
+          readOnly: true
+        id_annonce:
+          type: integer
+        reference_commande:
+          type: string
+          readOnly: true
+        description_commande:
+          type: string
+        titre_service:
+          type: string
+          readOnly: true
+        montant_total:
+          type: string
+          pattern: ^\d+(?:\.\d{1,2})?$
+          readOnly: true
+        taux_commission:
+          type: string
+          pattern: ^\d+(?:\.\d{1,2})?$
+          example: '10.00'
+          readOnly: true
+        montant_commission:
+          type: string
+          pattern: ^\d+(?:\.\d{1,2})?$
+          readOnly: true
+        montant_prestataire:
+          type: string
+          pattern: ^\d+(?:\.\d{1,2})?$
+          readOnly: true
+        delai_livraison_jours:
+          type: integer
+          readOnly: true
+        nombre_revisions_incluses:
+          type: integer
+          readOnly: true
+        nombre_revisions_utilisees:
+          type: integer
+          readOnly: true
+        livrables_convenus:
+          type: string
+          readOnly: true
+        statut:
+          type: string
+          enum:
+          - en_attente_reponse
+          - informations_demandees
+          - refusee
+          - en_attente_paiement
+          - paiement_en_cours
+          - payee
+          - en_cours_realisation
+          - livree
+          - revision_demandee
+          - en_revision
+          - en_litige
+          - terminee
+          - annulee
+          - remboursee
+          readOnly: true
+      required:
+      - id_commande
+      - id_prestataire
+      - id_client
+      - id_annonce
+      - reference_commande
+      - description_commande
+      - titre_service
+      - montant_total
+      - taux_commission
+      - montant_commission
+      - montant_prestataire
+      - delai_livraison_jours
+      - nombre_revisions_incluses
+      - nombre_revisions_utilisees
+      - livrables_convenus
+      - statut
+    CommandeCreate:
+      type: object
+      required:
+      - id_annonce
+      - description_commande
+      properties:
+        id_annonce:
+          type: integer
+          minimum: 1
+        description_commande:
+          type: string
+          minLength: 1
+    CommandeAction:
+      type: object
+      required:
+      - type_action
+      properties:
+        type_action:
+          type: string
+          enum:
+          - accepter
+          - refuser
+          - demander_precisions
+          - demarrer_realisation
+          - valider_livraison
+          - annuler
+        motif:
+          type: string
+          nullable: true
+          description: Obligatoire pour refuser, demander des précisions ou annuler selon la règle métier.
+    Livraison:
+      type: object
+      properties:
+        id_livraison:
+          type: integer
+          readOnly: true
+        id_commande:
+          type: integer
+          readOnly: true
+        numero_version:
+          type: integer
+          readOnly: true
+        message:
+          type: string
+        url_fichier:
+          type: string
+        nom_fichier:
+          type: string
+        type_mime:
+          type: string
+        taille_octets:
+          type: integer
+        statut:
+          type: string
+          enum:
+          - soumise
+          - acceptee
+          - a_reviser
+          - remplacee
+          readOnly: true
+        delivered_at:
+          type: string
+          format: date-time
+          readOnly: true
+    Revision:
+      type: object
+      properties:
+        id_revision:
+          type: integer
+          readOnly: true
+        id_commande:
+          type: integer
+          readOnly: true
+        description:
+          type: string
+        statut:
+          type: string
+          enum:
+          - demandee
+          - acceptee
+          - en_cours
+          - livree
+          - refusee
+          - annulee
+          readOnly: true
+        requested_at:
+          type: string
+          format: date-time
+          readOnly: true
+        completed_at:
+          type: string
+          format: date-time
+          nullable: true
+          readOnly: true
+    Paiement:
+      type: object
+      properties:
+        id_paiement:
+          type: integer
+          readOnly: true
+        id_commande:
+          type: integer
+          readOnly: true
+        reference_interne:
+          type: string
+          readOnly: true
+        montant:
+          type: string
+          pattern: ^\d+(?:\.\d{1,2})?$
+          readOnly: true
+        devise:
+          type: string
+          default: USD
+          readOnly: true
+        operateur:
+          type: string
+        numero_payeur_masque:
+          type: string
+          nullable: true
+          readOnly: true
+        statut:
+          type: string
+          enum:
+          - cree
+          - en_attente
+          - confirme
+          - echoue
+          - expire
+          - rembourse
+          readOnly: true
+    PaiementCreate:
+      type: object
+      required:
+      - operateur
+      - numero_payeur
+      properties:
+        operateur:
+          type: string
+          example: mpesa
+          enum:
+          - mpesa
+          - airtel_money
+          - orange_money
+        numero_payeur:
+          type: string
+          pattern: ^\+243[0-9]{9}$
+    Wallet:
+      type: object
+      properties:
+        id_wallet:
+          type: integer
+        id_prestataire:
+          type: integer
+        devise:
+          type: string
+          default: USD
+        solde_en_attente:
+          type: string
+          pattern: ^\d+(?:\.\d{1,2})?$
+        solde_disponible:
+          type: string
+          pattern: ^\d+(?:\.\d{1,2})?$
+    MouvementWallet:
+      type: object
+      properties:
+        id_mouvement:
+          type: integer
+        type_mouvement:
+          type: string
+          enum:
+          - credit_commande
+          - debit_retrait
+          - remboursement
+          - ajustement_credit
+          - ajustement_debit
+        sens:
+          type: string
+          enum:
+          - credit
+          - debit
+        montant:
+          type: string
+          pattern: ^\d+(?:\.\d{1,2})?$
+        solde_avant:
+          type: string
+          pattern: ^\d+(?:\.\d{1,2})?$
+        solde_apres:
+          type: string
+          pattern: ^\d+(?:\.\d{1,2})?$
+        reference:
+          type: string
+        statut:
+          type: string
+          enum:
+          - en_attente
+          - valide
+          - annule
+          - echoue
+        created_at:
+          type: string
+          format: date-time
+    Retrait:
+      type: object
+      properties:
+        id_retrait:
+          type: integer
+          readOnly: true
+        id_wallet:
+          type: integer
+          readOnly: true
+        reference_retrait:
+          type: string
+          readOnly: true
+        montant:
+          type: string
+          pattern: ^\d+(?:\.\d{1,2})?$
+        frais:
+          type: string
+          pattern: ^\d+(?:\.\d{1,2})?$
+          readOnly: true
+        montant_net:
+          type: string
+          pattern: ^\d+(?:\.\d{1,2})?$
+          readOnly: true
+        operateur:
+          type: string
+        numero_mobile_money:
+          type: string
+        statut:
+          type: string
+          enum:
+          - demande
+          - en_verification
+          - approuve
+          - en_cours_execution
+          - execute
+          - echoue
+          - refuse
+          readOnly: true
+        motif_refus:
+          type: string
+          nullable: true
+          readOnly: true
+    DecisionRetrait:
+      type: object
+      required:
+      - decision
+      properties:
+        decision:
+          type: string
+          enum:
+          - approuver
+          - refuser
+        motif_refus:
+          type: string
+          nullable: true
+    Avis:
+      type: object
+      properties:
+        id_avis:
+          type: integer
+          readOnly: true
+        id_commande:
+          type: integer
+          readOnly: true
+        id_client:
+          type: integer
+          readOnly: true
+        note:
+          type: integer
+          minimum: 1
+          maximum: 5
+        commentaire:
+          type: string
+          nullable: true
+        statut:
+          type: string
+          enum:
+          - publie
+          - masque
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+    Litige:
+      type: object
+      properties:
+        id_litige:
+          type: integer
+          readOnly: true
+        id_commande:
+          type: integer
+          readOnly: true
+        motif:
+          type: string
+        description:
+          type: string
+        preuves:
+          type: object
+          nullable: true
+        statut:
+          type: string
+          enum:
+          - ouvert
+          - en_analyse
+          - informations_demandees
+          - resolu
+          - ferme
+          readOnly: true
+        decision:
+          type: string
+          enum:
+          - remboursement_total
+          - paiement_total
+          - repartition_partielle
+          nullable: true
+          readOnly: true
+        montant_client:
+          type: string
+          pattern: ^\d+(?:\.\d{1,2})?$
+          readOnly: true
+        montant_prestataire:
+          type: string
+          pattern: ^\d+(?:\.\d{1,2})?$
+          readOnly: true
+    DecisionLitige:
+      type: object
+      required:
+      - decision
+      properties:
+        decision:
+          type: string
+          enum:
+          - remboursement_total
+          - paiement_total
+          - repartition_partielle
+        montant_client:
+          type: string
+          pattern: ^\d+(?:\.\d{1,2})?$
+        montant_prestataire:
+          type: string
+          pattern: ^\d+(?:\.\d{1,2})?$
+    Notification:
+      type: object
+      properties:
+        id_notification:
+          type: integer
+        type_notification:
+          type: string
+        titre:
+          type: string
+        message:
+          type: string
+        canal:
+          type: string
+          enum:
+          - in_app
+          - sms
+          - email
+        lien:
+          type: string
+          nullable: true
+        lu_at:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+    NotificationAck:
+      type: object
+      properties:
+        statut:
+          type: string
+          enum:
+          - lue
+    ExportRequest:
+      type: object
+      properties:
+        date_debut:
+          type: string
+          format: date
+        date_fin:
+          type: string
+          format: date
+        type_export:
+          type: string
+          enum:
+          - commandes
+          - paiements
+          - avis
+          - retraits
+    SyncResponse:
+      type: object
+      properties:
+        last_sync:
+          type: string
+          format: date-time
+        new_notifications:
+          type: array
+          items:
+            $ref: '#/components/schemas/Notification'
+        commandes_maj:
+          type: array
+          items:
+            $ref: '#/components/schemas/Commande'
+        paiements_maj:
+          type: array
+          items:
+            $ref: '#/components/schemas/Paiement'
+    UtilisateurUpdate:
+      type: object
+      additionalProperties: false
+      properties:
+        nom:
+          type: string
+          minLength: 1
+          maxLength: 100
+        prenom:
+          type: string
+          minLength: 1
+          maxLength: 100
+        postnom:
+          type: string
+          nullable: true
+          maxLength: 100
+        email:
+          type: string
+          format: email
+          nullable: true
+          maxLength: 255
+        image_profil:
+          type: string
+          format: uri
+          nullable: true
+    AuthSessionResponse:
+      type: object
+      required:
+      - message
+      - utilisateur
+      properties:
+        message:
+          type: string
+          example: Connexion réussie.
+        utilisateur:
+          $ref: '#/components/schemas/Utilisateur'
+    CategorieCreate:
+      type: object
+      additionalProperties: false
+      required:
+      - nom
+      properties:
+        nom:
+          type: string
+          minLength: 1
+          maxLength: 150
+        description:
+          type: string
+          nullable: true
+        icone:
+          type: string
+          nullable: true
+        est_active:
+          type: boolean
+          default: true
+    CategorieUpdate:
+      type: object
+      additionalProperties: false
+      properties:
+        nom:
+          type: string
+          minLength: 1
+          maxLength: 150
+        description:
+          type: string
+          nullable: true
+        icone:
+          type: string
+          nullable: true
+        est_active:
+          type: boolean
+          default: true
+    AnnonceCreate:
+      type: object
+      additionalProperties: false
+      properties:
+        id_categorie:
+          type: integer
+          minimum: 1
+        titre:
+          type: string
+          minLength: 1
+          maxLength: 200
+        description:
+          type: string
+          minLength: 1
+        prix_base:
+          type: string
+          pattern: ^\d+(?:\.\d{1,2})?$
+          example: '20.00'
+        delai_livraison_jours:
+          type: integer
+          minimum: 1
+        nombre_revisions:
+          type: integer
+          minimum: 0
+          default: 0
+        livrables_inclus:
+          type: string
+        elements_requis_client:
+          type: string
+        image_couverture:
+          type: string
+          format: uri
+          nullable: true
+        mots_cles:
+          type: string
+          nullable: true
+          description: Liste textuelle simplifiée du MVP.
+        conditions_particulieres:
+          type: string
+          nullable: true
+    AnnonceUpdate:
+      type: object
+      additionalProperties: false
+      properties:
+        id_categorie:
+          type: integer
+          minimum: 1
+        titre:
+          type: string
+          minLength: 1
+          maxLength: 200
+        description:
+          type: string
+          minLength: 1
+        prix_base:
+          type: string
+          pattern: ^\d+(?:\.\d{1,2})?$
+          example: '20.00'
+        delai_livraison_jours:
+          type: integer
+          minimum: 1
+        nombre_revisions:
+          type: integer
+          minimum: 0
+          default: 0
+        livrables_inclus:
+          type: string
+        elements_requis_client:
+          type: string
+        image_couverture:
+          type: string
+          format: uri
+          nullable: true
+        mots_cles:
+          type: string
+          nullable: true
+          description: Liste textuelle simplifiée du MVP.
+        conditions_particulieres:
+          type: string
+          nullable: true
+    ProfilPrestataireUpdate:
+      type: object
+      additionalProperties: false
+      properties:
+        nom_professionnel:
+          type: string
+          minLength: 1
+          maxLength: 150
+        bio:
+          type: string
+          minLength: 1
+        competences:
+          type: string
+          minLength: 1
+        portfolio_url:
+          type: string
+          format: uri
+          nullable: true
+        statut_disponibilite:
+          type: string
+          enum:
+          - disponible
+          - occupe
+          - indisponible
+    LivraisonCreate:
+      type: object
+      additionalProperties: false
+      required:
+      - message
+      - url_fichier
+      - nom_fichier
+      - type_mime
+      - taille_octets
+      properties:
+        message:
+          type: string
+          minLength: 1
+        url_fichier:
+          type: string
+          format: uri
+        nom_fichier:
+          type: string
+          minLength: 1
+          maxLength: 255
+        type_mime:
+          type: string
+          minLength: 1
+          maxLength: 100
+        taille_octets:
+          type: integer
+          minimum: 1
+    RevisionCreate:
+      type: object
+      additionalProperties: false
+      required:
+      - description
+      properties:
+        description:
+          type: string
+          minLength: 1
+    AvisCreate:
+      type: object
+      additionalProperties: false
+      required:
+      - note
+      properties:
+        note:
+          type: integer
+          minimum: 1
+          maximum: 5
+        commentaire:
+          type: string
+          nullable: true
+    LitigeCreate:
+      type: object
+      additionalProperties: false
+      required:
+      - motif
+      - description
+      properties:
+        motif:
+          type: string
+          minLength: 1
+        description:
+          type: string
+          minLength: 1
+        preuves:
+          type: object
+          nullable: true
+          additionalProperties: true
+    RetraitCreate:
+      type: object
+      additionalProperties: false
+      required:
+      - montant
+      - operateur
+      - numero_mobile_money
+      properties:
+        montant:
+          type: string
+          pattern: ^\d+(?:\.\d{1,2})?$
+          example: '15.00'
+        operateur:
+          type: string
+          minLength: 1
+          maxLength: 30
+        numero_mobile_money:
+          type: string
+          pattern: ^\+243[0-9]{9}$
+    PaginationMeta:
+      type: object
+      required:
+      - limit
+      - offset
+      - total
+      properties:
+        limit:
+          type: integer
+          minimum: 1
+        offset:
+          type: integer
+          minimum: 0
+        total:
+          type: integer
+          minimum: 0
+    UtilisateursPage:
+      type: object
+      required:
+      - data
+      - meta
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Utilisateur'
+        meta:
+          $ref: '#/components/schemas/PaginationMeta'
+    CategoriesPage:
+      type: object
+      required:
+      - data
+      - meta
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Categorie'
+        meta:
+          $ref: '#/components/schemas/PaginationMeta'
+    AnnoncesPage:
+      type: object
+      required:
+      - data
+      - meta
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Annonce'
+        meta:
+          $ref: '#/components/schemas/PaginationMeta'
+    PrestatairesPage:
+      type: object
+      required:
+      - data
+      - meta
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProfilPrestataire'
+        meta:
+          $ref: '#/components/schemas/PaginationMeta'
+    CommandesPage:
+      type: object
+      required:
+      - data
+      - meta
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Commande'
+        meta:
+          $ref: '#/components/schemas/PaginationMeta'
+    LivraisonsPage:
+      type: object
+      required:
+      - data
+      - meta
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Livraison'
+        meta:
+          $ref: '#/components/schemas/PaginationMeta'
+    RevisionsPage:
+      type: object
+      required:
+      - data
+      - meta
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Revision'
+        meta:
+          $ref: '#/components/schemas/PaginationMeta'
+    PaiementsPage:
+      type: object
+      required:
+      - data
+      - meta
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Paiement'
+        meta:
+          $ref: '#/components/schemas/PaginationMeta'
+    AvisPage:
+      type: object
+      required:
+      - data
+      - meta
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Avis'
+        meta:
+          $ref: '#/components/schemas/PaginationMeta'
+    MouvementsWalletPage:
+      type: object
+      required:
+      - data
+      - meta
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/MouvementWallet'
+        meta:
+          $ref: '#/components/schemas/PaginationMeta'
+    RetraitsPage:
+      type: object
+      required:
+      - data
+      - meta
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Retrait'
+        meta:
+          $ref: '#/components/schemas/PaginationMeta'
+    LitigesPage:
+      type: object
+      required:
+      - data
+      - meta
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Litige'
+        meta:
+          $ref: '#/components/schemas/PaginationMeta'
+    NotificationsPage:
+      type: object
+      required:
+      - data
+      - meta
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Notification'
+        meta:
+          $ref: '#/components/schemas/PaginationMeta'
+    WebhookPaiementPayload:
+      type: object
+      description: Payload reçu de l'opérateur/agrégateur Mobile Money. La forme exacte dépend du fournisseur choisi. Le backend
+        doit conserver le payload brut, vérifier la signature et extraire l'identifiant événement, la référence opérateur,
+        le montant et le statut via un adaptateur fournisseur.
+      additionalProperties: true
+    SimpleMessage:
+      type: object
+      required:
+      - message
+      properties:
+        message:
+          type: string
+  responses:
+    UnauthorizedError:
+      description: Session absente, expirée ou non authentifiée
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+            - error
+            - message
+            properties:
+              error:
+                type: string
+              message:
+                type: string
+              details:
+                type: object
+                nullable: true
+                additionalProperties:
+                  type: array
+                  items:
+                    type: string
+          example:
+            error: unauthenticated
+            message: Authentification requise.
+    ForbiddenError:
+      description: Utilisateur authentifié mais non autorisé pour cette opération
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+            - error
+            - message
+            properties:
+              error:
+                type: string
+              message:
+                type: string
+              details:
+                type: object
+                nullable: true
+                additionalProperties:
+                  type: array
+                  items:
+                    type: string
+          example:
+            error: forbidden
+            message: Accès interdit pour ce rôle ou cette ressource.
+    ValidationError:
+      description: Données reçues invalides
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+            - error
+            - message
+            properties:
+              error:
+                type: string
+              message:
+                type: string
+              details:
+                type: object
+                nullable: true
+                additionalProperties:
+                  type: array
+                  items:
+                    type: string
+          example:
+            error: validation_error
+            message: Les données fournies sont invalides.
+            details:
+              telephone:
+              - Le format du téléphone est invalide.
+    ConflictError:
+      description: Conflit métier ou transition d’état impossible
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+            - error
+            - message
+            properties:
+              error:
+                type: string
+              message:
+                type: string
+              details:
+                type: object
+                nullable: true
+                additionalProperties:
+                  type: array
+                  items:
+                    type: string
+    TooManyRequestsError:
+      description: Trop de tentatives ou de requêtes
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+            - error
+            - message
+            properties:
+              error:
+                type: string
+              message:
+                type: string
+              details:
+                type: object
+                nullable: true
+                additionalProperties:
+                  type: array
+                  items:
+                    type: string
+    AccountUnavailableError:
+      description: Compte non actif, suspendu, bloqué ou fermé
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+            - error
+            - message
+            properties:
+              error:
+                type: string
+              message:
+                type: string
+              details:
+                type: object
+                nullable: true
+                additionalProperties:
+                  type: array
+                  items:
+                    type: string
+paths:
+  /sanctum/csrf-cookie:
+    get:
+      tags:
+      - Auth
+      operationId: initialiserCsrfSanctum
+      summary: Initialiser la protection CSRF de Sanctum
+      description: À appeler avant la première requête d'authentification depuis la SPA. Le navigateur reçoit le cookie XSRF-TOKEN.
+        Avec Axios, utiliser withCredentials=true et withXSRFToken=true.
+      servers:
+      - url: http://localhost:8000
+        description: Laravel local
+      - url: https://api.findme.cd
+        description: Production
+      responses:
+        '204':
+          description: Cookie CSRF initialisé
+        '429':
+          $ref: '#/components/responses/TooManyRequestsError'
+  /auth/register:
+    post:
+      tags:
+      - Auth
+      summary: Inscription d'un nouvel utilisateur
+      description: 'Vérifie unicité téléphone/email, crée le compte en statut `a_verifier`, génère un OTP Redis et l''envoie
+        par SMS. Le rôle administrateur est interdit.
+
+        '
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserRegister'
+      responses:
+        '201':
+          description: Compte créé, OTP envoyé
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Compte créé. Vérifiez votre téléphone.
+                  id_utilisateur:
+                    type: integer
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '409':
+          $ref: '#/components/responses/ConflictError'
+        '429':
+          $ref: '#/components/responses/TooManyRequestsError'
+      operationId: inscrireUtilisateur
+  /auth/verify-phone:
+    post:
+      tags:
+      - Auth
+      summary: Vérifier l'OTP et activer le compte
+      description: Valide l'OTP, active automatiquement le compte puis ouvre une session Laravel. Aucun JWT ni refresh token
+        n'est retourné.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OtpVerify'
+      responses:
+        '200':
+          description: Compte activé et session ouverte
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthSessionResponse'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/TooManyRequestsError'
+      operationId: verifierTelephone
+  /auth/login:
+    post:
+      tags:
+      - Auth
+      summary: Authentification utilisateur
+      description: Authentifie par téléphone + mot de passe et ouvre une session Laravel Sanctum. Le cookie de session est
+        géré par le navigateur.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserLogin'
+      responses:
+        '200':
+          description: Connexion réussie et session ouverte
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthSessionResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/AccountUnavailableError'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/TooManyRequestsError'
+      operationId: connecterUtilisateur
+  /auth/logout:
+    post:
+      tags:
+      - Auth
+      summary: Déconnexion
+      security:
+      - SanctumSession: []
+      responses:
+        '200':
+          description: Session fermée
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SimpleMessage'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+      operationId: deconnecterUtilisateur
+      description: Invalide la session Laravel courante et régénère le jeton CSRF côté serveur si nécessaire.
+  /auth/me:
+    get:
+      tags:
+      - Auth
+      summary: Profil de l'utilisateur connecté
+      security:
+      - SanctumSession: []
+      responses:
+        '200':
+          description: Profil courant
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Utilisateur'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+      operationId: lireUtilisateurCourant
+    patch:
+      tags:
+      - Auth
+      summary: Modifier son profil
+      security:
+      - SanctumSession: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UtilisateurUpdate'
+      responses:
+        '200':
+          description: Profil mis à jour
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+      operationId: modifierUtilisateurCourant
+  /auth/password/forgot:
+    post:
+      tags:
+      - Auth
+      summary: Demander un OTP de récupération de compte
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PasswordForgot'
+      responses:
+        '200':
+          description: Si le numéro existe, un OTP est envoyé (réponse uniforme).
+        '429':
+          $ref: '#/components/responses/TooManyRequestsError'
+      operationId: demanderReinitialisationMotDePasse
+  /auth/password/reset:
+    post:
+      tags:
+      - Auth
+      summary: Définir un nouveau mot de passe via OTP
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PasswordReset'
+      responses:
+        '200':
+          description: Mot de passe mis à jour et sessions précédentes invalidées
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/TooManyRequestsError'
+      operationId: reinitialiserMotDePasse
+      description: Valide l'OTP, remplace le mot de passe puis invalide les sessions actives de l'utilisateur.
+  /users:
+    get:
+      tags:
+      - Utilisateurs
+      summary: Liste des utilisateurs
+      security:
+      - SanctumSession: []
+      parameters:
+      - name: role
+        in: query
+        schema:
+          type: string
+          enum:
+          - client
+          - prestataire
+          - administrateur
+      - name: statut_compte
+        in: query
+        schema:
+          type: string
+          enum:
+          - a_verifier
+          - actif
+          - suspendu
+          - bloque
+          - ferme
+      - name: limit
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 20
+      - name: offset
+        in: query
+        schema:
+          type: integer
+          minimum: 0
+          default: 0
+      responses:
+        '200':
+          description: Tableau d'utilisateurs
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UtilisateursPage'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+      operationId: listerUtilisateurs
+      x-roles:
+      - administrateur
+      x-mvp-priority: P1
+  /users/{id}:
+    get:
+      tags:
+      - Utilisateurs
+      summary: Détails d'un utilisateur
+      security:
+      - SanctumSession: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: Détails de l'utilisateur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Utilisateur'
+        '404':
+          description: Utilisateur introuvable
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+      operationId: lireUtilisateur
+      x-roles:
+      - administrateur
+      x-mvp-priority: P1
+    patch:
+      tags:
+      - Utilisateurs
+      summary: Modifier le statut d'un compte (suspendre / bloquer / réactiver)
+      security:
+      - SanctumSession: []
+      description: 'Réservé à l''administrateur. Un admin ne peut pas modifier son propre statut.
+
+        '
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StatutCompteUpdate'
+      responses:
+        '200':
+          description: Statut mis à jour
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          description: Utilisateur introuvable
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+      operationId: modifierStatutUtilisateur
+      x-roles:
+      - administrateur
+      x-mvp-priority: P1
+  /categories:
+    get:
+      tags:
+      - Catégories
+      summary: Liste des catégories
+      parameters:
+      - name: est_active
+        in: query
+        schema:
+          type: boolean
+      responses:
+        '200':
+          description: Tableau de catégories
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Categorie'
+      operationId: listerCategories
+      x-mvp-priority: P0
+    post:
+      tags:
+      - Catégories
+      summary: Enregistrer une nouvelle catégorie
+      security:
+      - SanctumSession: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CategorieCreate'
+      responses:
+        '201':
+          description: Catégorie créée
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+      operationId: creerCategorie
+      x-roles:
+      - administrateur
+      x-mvp-priority: P1
+  /categories/{id}:
+    get:
+      tags:
+      - Catégories
+      summary: Détails d'une catégorie
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: Détails de la catégorie
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Categorie'
+        '404':
+          description: Catégorie introuvable
+      operationId: lireCategorie
+      x-mvp-priority: P0
+    delete:
+      tags:
+      - Catégories
+      summary: Désactiver une catégorie (Soft Delete)
+      security:
+      - SanctumSession: []
+      description: 'Suppression logique : passe est_active à false. Conserve les annonces existantes.
+
+        '
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: Catégorie désactivée
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+      operationId: desactiverCategorie
+      x-roles:
+      - administrateur
+      x-mvp-priority: P1
+    patch:
+      tags:
+      - Catégories
+      summary: Modifier une catégorie
+      security:
+      - SanctumSession: []
+      description: 'Mise à jour nom, description, icône ou activation. Réservé administrateur.
+
+        '
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CategorieUpdate'
+      responses:
+        '200':
+          description: Catégorie mise à jour
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          description: Catégorie introuvable
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+      operationId: modifierCategorie
+      x-roles:
+      - administrateur
+      x-mvp-priority: P1
+  /annonces:
+    get:
+      tags:
+      - Annonces
+      summary: Liste / recherche des annonces
+      parameters:
+      - name: q
+        in: query
+        schema:
+          type: string
+      - name: statut
+        in: query
+        schema:
+          type: string
+          enum:
+          - brouillon
+          - en_attente_validation
+          - publiee
+          - refusee
+          - desactivee
+          - supprimee
+        description: Filtre réservé au back-office authentifié. Pour un visiteur, seules les annonces publiées sont retournées.
+      - name: id_categorie
+        in: query
+        schema:
+          type: integer
+      - name: id_prestataire
+        in: query
+        schema:
+          type: integer
+      - name: prix_min
+        in: query
+        schema:
+          type: string
+          pattern: ^\d+(?:\.\d{1,2})?$
+      - name: prix_max
+        in: query
+        schema:
+          type: string
+          pattern: ^\d+(?:\.\d{1,2})?$
+      - name: delai_max
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+      - name: note_min
+        in: query
+        schema:
+          type: number
+          minimum: 0
+          maximum: 5
+      - name: limit
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 20
+      - name: offset
+        in: query
+        schema:
+          type: integer
+          minimum: 0
+          default: 0
+      responses:
+        '200':
+          description: Tableau d'annonces
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnnoncesPage'
+      operationId: rechercherAnnonces
+      x-mvp-priority: P0
+    post:
+      tags:
+      - Annonces
+      summary: Enregistrer une nouvelle annonce
+      security:
+      - SanctumSession: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AnnonceCreate'
+      responses:
+        '201':
+          description: Annonce créée
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+      operationId: creerAnnonce
+      x-roles:
+      - prestataire
+      x-mvp-priority: P0
+  /annonces/{id}:
+    get:
+      tags:
+      - Annonces
+      summary: Détails d'une annonce spécifique
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: Détails de l'annonce
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Annonce'
+        '404':
+          description: Annonce introuvable
+      operationId: lireAnnonce
+      x-mvp-priority: P0
+    delete:
+      tags:
+      - Annonces
+      summary: Retirer/Supprimer une annonce (Soft Delete)
+      security:
+      - SanctumSession: []
+      description: 'Suppression logique : passe le statut à ''supprimee'' au lieu de DELETE physique. Préserve l''historique
+        des commandes et garantit la traçabilité.
+
+        '
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: Annonce marquée comme supprimee
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+      operationId: supprimerAnnonce
+      x-roles:
+      - prestataire
+      x-mvp-priority: P1
+    patch:
+      tags:
+      - Annonces
+      summary: Modifier une annonce
+      security:
+      - SanctumSession: []
+      description: 'Prestataire propriétaire. Autorisé si statut brouillon ou refusee. Admin : voir PATCH /annonces/{id}/moderation.
+
+        '
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AnnonceUpdate'
+      responses:
+        '200':
+          description: Annonce mise à jour
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          description: Annonce introuvable
+        '409':
+          description: Statut non modifiable
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+      operationId: modifierAnnonce
+      x-roles:
+      - prestataire
+      x-mvp-priority: P0
+  /annonces/{id}/soumettre:
+    post:
+      tags:
+      - Annonces
+      summary: Soumettre une annonce à validation
+      security:
+      - SanctumSession: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: Annonce en attente de validation
+        '409':
+          description: Transition impossible
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+      operationId: soumettreAnnonce
+      x-roles:
+      - prestataire
+      x-mvp-priority: P0
+  /annonces/{id}/moderation:
+    patch:
+      tags:
+      - Annonces
+      summary: Publier ou refuser une annonce (Admin uniquement)
+      security:
+      - SanctumSession: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ModerationAnnonce'
+      responses:
+        '200':
+          description: Décision appliquée
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+      operationId: modererAnnonce
+      x-roles:
+      - administrateur
+      x-mvp-priority: P1
+  /annonces/{id}/avis:
+    get:
+      tags:
+      - Litiges & Avis
+      summary: Historique des avis d'une annonce / prestataire lié
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+      - name: limit
+        in: query
+        schema:
+          type: integer
+          default: 100
+      - name: offset
+        in: query
+        schema:
+          type: integer
+          default: 0
+      responses:
+        '200':
+          description: Liste paginée des avis
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AvisPage'
+      operationId: listerAvisAnnonce
+      x-mvp-priority: P1
+  /prestataires:
+    get:
+      tags:
+      - Prestataires
+      summary: Liste des prestataires
+      parameters:
+      - name: statut_disponibilite
+        in: query
+        schema:
+          type: string
+          enum:
+          - disponible
+          - occupe
+          - indisponible
+      - name: limit
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 20
+      - name: offset
+        in: query
+        schema:
+          type: integer
+          minimum: 0
+          default: 0
+      responses:
+        '200':
+          description: Tableau de profils
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PrestatairesPage'
+      operationId: listerPrestataires
+      x-mvp-priority: P1
+  /prestataires/{id}:
+    get:
+      tags:
+      - Prestataires
+      summary: Détails d'un prestataire
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: Détails du prestataire
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProfilPrestataire'
+        '404':
+          description: Prestataire introuvable
+      operationId: lirePrestataire
+      x-mvp-priority: P1
+  /commandes:
+    get:
+      tags:
+      - Commandes
+      summary: Liste des commandes
+      security:
+      - SanctumSession: []
+      parameters:
+      - name: statut
+        in: query
+        schema:
+          type: string
+      - name: limit
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 20
+      - name: offset
+        in: query
+        schema:
+          type: integer
+          minimum: 0
+          default: 0
+      responses:
+        '200':
+          description: Tableau de commandes
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommandesPage'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+      operationId: listerCommandes
+      x-roles:
+      - client
+      - prestataire
+      - administrateur
+      x-mvp-priority: P0
+    post:
+      tags:
+      - Commandes
+      summary: Envoyer une demande de service
+      security:
+      - SanctumSession: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CommandeCreate'
+      responses:
+        '201':
+          description: Commande créée
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '409':
+          description: Annonce non commandable
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+      operationId: creerDemandeService
+      x-roles:
+      - client
+      x-mvp-priority: P0
+      description: Crée une demande liée à une annonce publiée. Le statut initial est en_attente_reponse. Le paiement n'est
+        pas encore possible.
+  /commandes/{id}:
+    get:
+      tags:
+      - Commandes
+      summary: Détails d'une commande spécifique
+      security:
+      - SanctumSession: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: Détails de la commande
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Commande'
+        '404':
+          description: Commande introuvable
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+      operationId: lireCommande
+      x-roles:
+      - client
+      - prestataire
+      - administrateur
+      x-mvp-priority: P0
+  /commandes/{id}/actions:
+    post:
+      tags:
+      - Commandes
+      summary: Envoyer une action de cycle de vie sur une commande
+      security:
+      - SanctumSession: []
+      description: 'Actions supportées : accepter, refuser, demander_precisions, demarrer_realisation, valider_livraison,
+        annuler. Le backend valide le rôle et la transition d''état.'
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CommandeAction'
+      responses:
+        '202':
+          description: Action acceptée, statut mis à jour.
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '409':
+          description: Commande déjà dans l'état cible ou transition interdite
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+      operationId: executerActionCommande
+      x-roles:
+      - client
+      - prestataire
+      x-mvp-priority: P0
+  /commandes/{id}/livraisons:
+    get:
+      tags:
+      - Commandes
+      summary: Historique des livraisons d'une commande
+      security:
+      - SanctumSession: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+      - name: limit
+        in: query
+        schema:
+          type: integer
+          default: 100
+      - name: offset
+        in: query
+        schema:
+          type: integer
+          default: 0
+      responses:
+        '200':
+          description: Liste paginée des livraisons
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LivraisonsPage'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+      operationId: listerLivraisons
+      x-roles:
+      - client
+      - prestataire
+      - administrateur
+      x-mvp-priority: P0
+    post:
+      tags:
+      - Commandes
+      summary: Déposer un livrable
+      security:
+      - SanctumSession: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LivraisonCreate'
+      responses:
+        '201':
+          description: Livraison soumise
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '409':
+          description: Commande non livrable dans cet état
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+      operationId: creerLivraison
+      x-roles:
+      - prestataire
+      x-mvp-priority: P0
+  /commandes/{id}/revisions:
+    get:
+      tags:
+      - Commandes
+      summary: Historique des révisions d'une commande
+      security:
+      - SanctumSession: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: Liste des révisions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RevisionsPage'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+      operationId: listerRevisions
+      x-roles:
+      - client
+      - prestataire
+      - administrateur
+      x-mvp-priority: P0
+    post:
+      tags:
+      - Commandes
+      summary: Demander une révision
+      security:
+      - SanctumSession: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RevisionCreate'
+      responses:
+        '201':
+          description: Révision demandée
+        '409':
+          description: Plus de révisions incluses ou statut incompatible
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+      operationId: demanderRevision
+      x-roles:
+      - client
+      x-mvp-priority: P0
+  /commandes/{id}/paiements:
+    get:
+      tags:
+      - Paiements
+      summary: Historique des tentatives de paiement d'une commande
+      security:
+      - SanctumSession: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: Liste des paiements
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaiementsPage'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+      operationId: listerPaiementsCommande
+      x-roles:
+      - client
+      - administrateur
+      x-mvp-priority: P1
+    post:
+      tags:
+      - Paiements
+      summary: Initier un paiement Mobile Money
+      security:
+      - SanctumSession: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+      - name: Idempotency-Key
+        in: header
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PaiementCreate'
+      responses:
+        '202':
+          description: Paiement accepté, transmis à l'opérateur.
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '409':
+          description: Paiement déjà confirmé ou commande non payable
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+      operationId: initierPaiement
+      x-roles:
+      - client
+      x-mvp-priority: P0
+  /commandes/{id}/avis:
+    post:
+      tags:
+      - Litiges & Avis
+      summary: Laisser un avis sur une commande terminée
+      security:
+      - SanctumSession: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AvisCreate'
+      responses:
+        '201':
+          description: Avis publié
+        '409':
+          description: Commande non terminée ou avis déjà existant
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+      operationId: creerAvis
+      x-roles:
+      - client
+      x-mvp-priority: P1
+  /commandes/{id}/litiges:
+    post:
+      tags:
+      - Litiges & Avis
+      summary: Ouvrir un litige sur une commande
+      security:
+      - SanctumSession: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LitigeCreate'
+      responses:
+        '201':
+          description: Litige ouvert
+        '409':
+          description: Litige déjà ouvert ou statut incompatible
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+      operationId: ouvrirLitige
+      x-roles:
+      - client
+      x-mvp-priority: P0
+      description: Seul le client propriétaire de la commande peut ouvrir un litige avant la libération des fonds.
+  /webhooks/paiements:
+    post:
+      tags:
+      - Paiements
+      summary: Callback opérateur Mobile Money
+      description: 'Vérifie la signature, journalise l''événement, confirme ou échoue le paiement. Idempotent via (operateur,
+        identifiant_evenement).
+
+        '
+      responses:
+        '200':
+          description: Événement traité, rejeté, ignoré ou dupliqué.
+        '401':
+          description: Signature opérateur invalide
+        '400':
+          description: Payload inexploitable
+      operationId: recevoirWebhookPaiement
+      x-mvp-priority: P0
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WebhookPaiementPayload'
+  /wallet:
+    get:
+      tags:
+      - Wallet & Retraits
+      summary: Récupérer le portefeuille du prestataire connecté
+      security:
+      - SanctumSession: []
+      responses:
+        '200':
+          description: Portefeuille du prestataire
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Wallet'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+      operationId: lireWallet
+      x-roles:
+      - prestataire
+      x-mvp-priority: P0
+  /wallet/mouvements:
+    get:
+      tags:
+      - Wallet & Retraits
+      summary: Historique des mouvements du portefeuille
+      security:
+      - SanctumSession: []
+      parameters:
+      - name: limit
+        in: query
+        schema:
+          type: integer
+          default: 100
+      - name: offset
+        in: query
+        schema:
+          type: integer
+          default: 0
+      responses:
+        '200':
+          description: Liste paginée des mouvements
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MouvementsWalletPage'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+      operationId: listerMouvementsWallet
+      x-roles:
+      - prestataire
+      x-mvp-priority: P0
+  /retraits:
+    get:
+      tags:
+      - Wallet & Retraits
+      summary: Liste des retraits
+      security:
+      - SanctumSession: []
+      parameters:
+      - name: statut
+        in: query
+        schema:
+          type: string
+          enum:
+          - demande
+          - en_verification
+          - approuve
+          - en_cours_execution
+          - execute
+          - echoue
+          - refuse
+      - name: limit
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 20
+      - name: offset
+        in: query
+        schema:
+          type: integer
+          minimum: 0
+          default: 0
+      responses:
+        '200':
+          description: Tableau de retraits
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RetraitsPage'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+      operationId: listerRetraits
+      x-roles:
+      - prestataire
+      - administrateur
+      x-mvp-priority: P0
+    post:
+      tags:
+      - Wallet & Retraits
+      summary: Demander un retrait
+      security:
+      - SanctumSession: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RetraitCreate'
+      responses:
+        '201':
+          description: Retrait demandé
+        '400':
+          description: Solde insuffisant
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+      operationId: demanderRetrait
+      x-roles:
+      - prestataire
+      x-mvp-priority: P0
+  /retraits/{id}:
+    get:
+      tags:
+      - Wallet & Retraits
+      summary: Détails d'un retrait
+      security:
+      - SanctumSession: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: Détails du retrait
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Retrait'
+        '404':
+          description: Retrait introuvable
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+      operationId: lireRetrait
+      x-roles:
+      - prestataire
+      - administrateur
+      x-mvp-priority: P1
+    patch:
+      tags:
+      - Wallet & Retraits
+      summary: Approuver ou refuser un retrait (Admin uniquement)
+      security:
+      - SanctumSession: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DecisionRetrait'
+      responses:
+        '200':
+          description: Décision appliquée
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+      operationId: deciderRetrait
+      x-roles:
+      - administrateur
+      x-mvp-priority: P1
+  /litiges:
+    get:
+      tags:
+      - Litiges & Avis
+      summary: Liste des litiges
+      security:
+      - SanctumSession: []
+      parameters:
+      - name: statut
+        in: query
+        schema:
+          type: string
+          enum:
+          - ouvert
+          - en_analyse
+          - informations_demandees
+          - resolu
+          - ferme
+      - name: limit
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 20
+      - name: offset
+        in: query
+        schema:
+          type: integer
+          minimum: 0
+          default: 0
+      responses:
+        '200':
+          description: Liste paginée des litiges
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LitigesPage'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+      operationId: listerLitiges
+      x-roles:
+      - administrateur
+      x-mvp-priority: P0
+  /litiges/{id}:
+    get:
+      tags:
+      - Litiges & Avis
+      summary: Détails d'un litige
+      security:
+      - SanctumSession: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: Détails du litige
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Litige'
+        '404':
+          description: Litige introuvable
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+      operationId: lireLitige
+      x-roles:
+      - client
+      - prestataire
+      - administrateur
+      x-mvp-priority: P0
+    patch:
+      tags:
+      - Litiges & Avis
+      summary: Trancher un litige (Admin uniquement)
+      security:
+      - SanctumSession: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DecisionLitige'
+      responses:
+        '200':
+          description: Décision appliquée
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+      operationId: trancherLitige
+      x-roles:
+      - administrateur
+      x-mvp-priority: P0
+  /notifications:
+    get:
+      tags:
+      - Notifications
+      summary: Liste des notifications récentes avec filtres
+      security:
+      - SanctumSession: []
+      parameters:
+      - name: canal
+        in: query
+        schema:
+          type: string
+          enum:
+          - in_app
+          - sms
+          - email
+      - name: non_lues
+        in: query
+        schema:
+          type: boolean
+      - name: limit
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 20
+      - name: offset
+        in: query
+        schema:
+          type: integer
+          minimum: 0
+          default: 0
+      responses:
+        '200':
+          description: Liste paginée des notifications
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationsPage'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+      operationId: listerNotifications
+      x-roles:
+      - client
+      - prestataire
+      - administrateur
+      x-mvp-priority: P1
+  /notifications/{id}/ack:
+    patch:
+      tags:
+      - Notifications
+      summary: Acquitter une notification (marquer comme lue)
+      security:
+      - SanctumSession: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: Notification acquittée
+        '404':
+          description: Notification introuvable
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+      operationId: marquerNotificationLue
+      x-roles:
+      - client
+      - prestataire
+      - administrateur
+      x-mvp-priority: P1
+  /sync:
+    get:
+      tags:
+      - Notifications
+      summary: Récupérer les événements manquants post-reconnexion
+      security:
+      - SanctumSession: []
+      description: 'Utilisé par le Frontend React après une coupure réseau. Retourne les notifications, commandes et paiements
+        survenus depuis `?since=<timestamp>`.
+
+        '
+      parameters:
+      - name: since
+        in: query
+        required: true
+        schema:
+          type: string
+          format: date-time
+      responses:
+        '200':
+          description: Payload de synchronisation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SyncResponse'
+        '400':
+          description: Format date invalide
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+      operationId: synchroniserDepuis
+      x-roles:
+      - client
+      - prestataire
+      - administrateur
+      x-mvp-priority: P2
+  /export/csv:
+    get:
+      tags:
+      - Export
+      summary: Générer un export CSV des données
+      security:
+      - SanctumSession: []
+      parameters:
+      - name: date_debut
+        in: query
+        required: true
+        schema:
+          type: string
+          format: date
+      - name: date_fin
+        in: query
+        required: true
+        schema:
+          type: string
+          format: date
+      - name: type_export
+        in: query
+        required: true
+        schema:
+          type: string
+          enum:
+          - commandes
+          - paiements
+          - avis
+          - retraits
+      responses:
+        '200':
+          description: Fichier CSV binaire
+          content:
+            text/csv:
+              schema:
+                type: string
+                format: binary
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+      operationId: exporterCsv
+      x-roles:
+      - administrateur
+      x-mvp-priority: P2
+  /annonces/{id}/desactiver:
+    post:
+      tags:
+      - Annonces
+      operationId: desactiverAnnonce
+      summary: Désactiver temporairement une annonce
+      security:
+      - SanctumSession: []
+      x-roles:
+      - prestataire
+      - administrateur
+      x-mvp-priority: P1
+      description: Masque l'annonce sans la supprimer. Les commandes existantes restent inchangées.
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          minimum: 1
+      responses:
+        '200':
+          description: Annonce désactivée
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          description: Annonce introuvable
+        '409':
+          $ref: '#/components/responses/ConflictError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+  /prestataires/me:
+    get:
+      tags:
+      - Prestataires
+      operationId: lireMonProfilPrestataire
+      summary: Récupérer son profil prestataire
+      security:
+      - SanctumSession: []
+      x-roles:
+      - prestataire
+      x-mvp-priority: P0
+      responses:
+        '200':
+          description: Profil prestataire courant
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProfilPrestataire'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          description: Profil prestataire non encore créé
+    patch:
+      tags:
+      - Prestataires
+      operationId: modifierMonProfilPrestataire
+      summary: Compléter ou modifier son profil professionnel
+      security:
+      - SanctumSession: []
+      x-roles:
+      - prestataire
+      x-mvp-priority: P0
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProfilPrestataireUpdate'
+      responses:
+        '200':
+          description: Profil prestataire mis à jour
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+x-frontend-integration:
+  auth_mode: Laravel Sanctum SPA
+  csrf_bootstrap: GET /sanctum/csrf-cookie
+  credentials: Le navigateur envoie automatiquement le cookie de session; ne jamais stocker de token dans localStorage/sessionStorage.
+  axios: Configurer withCredentials=true et withXSRFToken=true.
+  production_domains: Utiliser de préférence app.findme.cd et api.findme.cd sous le même domaine racine.
